@@ -16,18 +16,22 @@ import org.teamvoided.template.entity.Grave
 import java.util.*
 
 class GraveRenderer(context: EntityRendererProvider.Context) : EntityRenderer<Grave>(context) {
-    var model = SkullModel(context.modelSet.bakeLayer(ModelLayers.PLAYER_HEAD))
+    var head = SkullModel(context.modelSet.bakeLayer(ModelLayers.PLAYER_HEAD))
+    var skull = SkullModel(context.modelSet.bakeLayer(ModelLayers.SKELETON_SKULL))
     override fun render(
         grave: Grave, f: Float, g: Float, poseStack: PoseStack, multiBufferSource: MultiBufferSource, i: Int,
     ) {
-        if (grave.ownerUUID.isEmpty) return
-
         poseStack.pushPose()
         poseStack.translate(-0.5, 0.0, -0.5)
-        val resolvableProfile = ResolvableProfile(Optional.empty(), Optional.of(grave.ownerUUID.get()), PropertyMap()).resolve().get()
-        val renderType = SkullBlockRenderer.getRenderType(SkullBlock.Types.PLAYER, resolvableProfile)
-
-        SkullBlockRenderer.renderSkull(null, 180.0f, 0f, poseStack, multiBufferSource, i, model, renderType)
+        if (grave.ownerUUID.isPresent) {
+            val resolvableProfile =
+                ResolvableProfile(Optional.empty(), Optional.of(grave.ownerUUID.get()), PropertyMap()).resolve().get()
+            val renderType = SkullBlockRenderer.getRenderType(SkullBlock.Types.PLAYER, resolvableProfile)
+            SkullBlockRenderer.renderSkull(null, 180.0f, 0f, poseStack, multiBufferSource, i, head, renderType)
+        } else {
+            val renderType = SkullBlockRenderer.getRenderType(SkullBlock.Types.SKELETON, null)
+            SkullBlockRenderer.renderSkull(null, 180.0f, 0f, poseStack, multiBufferSource, i, skull, renderType)
+        }
 
         poseStack.popPose()
         super.render(grave, f, g, poseStack, multiBufferSource, i)

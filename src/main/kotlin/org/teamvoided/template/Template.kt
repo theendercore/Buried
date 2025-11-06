@@ -9,9 +9,10 @@ import net.minecraft.resources.ResourceLocation
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.teamvoided.template.config.TemplateConfig
-import org.teamvoided.template.entity.Grave
+import org.teamvoided.template.init.BAttachmentTypes
 import org.teamvoided.template.init.BEntities
-import java.util.*
+import org.teamvoided.template.init.BGraveData
+import org.teamvoided.template.init.BRegistries
 
 @Suppress("unused")
 object Template {
@@ -25,6 +26,9 @@ object Template {
 
     fun init() {
         log.info("Hello from Common")
+        BRegistries.init()
+        BGraveData.init()
+        BAttachmentTypes.init()
         BEntities.init()
 
         CommandRegistrationCallback.EVENT.register { dispatcher, ctx, _ ->
