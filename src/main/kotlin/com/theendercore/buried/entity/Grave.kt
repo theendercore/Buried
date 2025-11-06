@@ -1,13 +1,10 @@
 package com.theendercore.buried.entity
 
-import com.mojang.serialization.JsonOps
 import com.theendercore.buried.Buried.log
-import com.theendercore.buried.core.component.GraveData
 import com.theendercore.buried.init.BAttachmentTypes
 import com.theendercore.buried.init.BEntities
 import com.theendercore.buried.init.BGraveData
 import net.minecraft.nbt.CompoundTag
-import net.minecraft.network.chat.Component
 import net.minecraft.network.syncher.EntityDataAccessor
 import net.minecraft.network.syncher.EntityDataSerializers
 import net.minecraft.network.syncher.SynchedEntityData
@@ -17,13 +14,15 @@ import net.minecraft.world.InteractionHand
 import net.minecraft.world.InteractionResult
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.EntityType
+import net.minecraft.world.entity.MoverType
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.entity.vehicle.Boat
 import net.minecraft.world.level.Level
+import net.minecraft.world.phys.Vec3
 import java.util.*
 
 @Suppress("UnstableApiUsage")
-class Grave(entityType: EntityType<*>, level: Level) : net.minecraft.world.entity.Entity(entityType, level) {
+class Grave(entityType: EntityType<out Entity>, level: Level) : Entity(entityType, level) {
     constructor(level: Level) : this(BEntities.GRAVE, level)
 
     var entityLevel: Level? = level()
@@ -103,6 +102,22 @@ class Grave(entityType: EntityType<*>, level: Level) : net.minecraft.world.entit
         return InteractionResult.PASS
     }
 
+    override fun tick() {
+        super.tick()
+        if (level().minBuildHeight + 1 < y) {
+            applyGravity()
+            move(MoverType.SELF, deltaMovement)
+            var f = 0.99
+            if (onGround()) {
+                f *= level().getBlockState(blockPosBelowThatAffectsMyMovement).block.getFriction()
+            }
+
+            deltaMovement = deltaMovement.multiply(f, 0.0, f)
+        } else if (y < level().minBuildHeight) {
+            setPos(x, level().minBuildHeight + 1.0, z)
+        }
+    }
+
     companion object {
         const val OWNER_KEY = "owner"
         const val CREATION_TIME_KEY = "creation_time"
@@ -116,7 +131,11 @@ class Grave(entityType: EntityType<*>, level: Level) : net.minecraft.world.entit
         fun createGrave(player: Player) {
             val level = player.level()
             if (level.isClientSide) return
-            val pos = player.position()
+            var pos = player.position()
+
+            if (level.minBuildHeight >= pos.y) {
+                pos = Vec3(pos.x, level.minBuildHeight + 1.0, pos.z)
+            }
 
             log.info(
                 "Creating a grave for {} at {} {}",
