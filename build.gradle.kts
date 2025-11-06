@@ -51,8 +51,8 @@ dependencies {
     modImplementation(libs.creative.works)
     modImplementation(libs.imguimc)
 }
-val username = "vDev"
-val uuid: String? = null
+val username = "Endoside"
+val uuid: String? = "a5fc6689-7d19-4c39-a04e-95e4ec460298"
 
 loom {
     splitEnvironmentSourceSets()
