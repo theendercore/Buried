@@ -1,17 +1,19 @@
 package com.theendercore.buried
 
 import com.mojang.brigadier.context.CommandContext
+import com.theendercore.buried.config.BuriedConfig
+import com.theendercore.buried.init.BAttachmentTypes
+import com.theendercore.buried.init.BEntities
+import com.theendercore.buried.init.BGraveData
+import com.theendercore.buried.init.BRegistries
 import me.fzzyhmstrs.fzzy_config.api.ConfigApi
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback
+import net.fabricmc.loader.api.FabricLoader
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands.literal
 import net.minecraft.resources.ResourceLocation
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import com.theendercore.buried.config.BuriedConfig
-import com.theendercore.buried.init.BEntities
-import com.theendercore.buried.init.BGraveData
-import com.theendercore.buried.init.BRegistries
 
 @Suppress("unused")
 object Buried {
@@ -27,10 +29,13 @@ object Buried {
         log.info("Hello from Common")
         BRegistries.init()
         BGraveData.init()
+        BAttachmentTypes.init()
         BEntities.init()
 
-        CommandRegistrationCallback.EVENT.register { dispatcher, ctx, _ ->
-            dispatcher.root.addChild(literal("grave").executes(::grave).build())
+        if (isDev()) {
+            CommandRegistrationCallback.EVENT.register { dispatcher, ctx, _ ->
+                dispatcher.root.addChild(literal("grave").executes(::grave).build())
+            }
         }
     }
 
@@ -41,6 +46,8 @@ object Buried {
 
         return 0
     }
+
+    fun isDev() = FabricLoader.getInstance().isDevelopmentEnvironment
 
     fun id(path: String): ResourceLocation = ResourceLocation.fromNamespaceAndPath(MODID, path)
 }

@@ -21,6 +21,6 @@ object BEntities {
     )
 
     fun <T : Entity> register(id: String, entityType: EntityType.Builder<T>): EntityType<T> {
-        return Registry.register(BuiltInRegistries.ENTITY_TYPE, id(id), entityType.build(id))
+        return Registry.register(BuiltInRegistries.ENTITY_TYPE, id(id), entityType.build(null))
     }
 }

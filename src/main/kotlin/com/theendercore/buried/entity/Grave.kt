@@ -46,12 +46,6 @@ class Grave(entityType: EntityType<*>, level: Level) : net.minecraft.world.entit
         ownerUUID = Optional.of(entity.uuid)
     }
 
-    var graveData: List<GraveData>
-        get() = getAttachedOrThrow(BAttachmentTypes.GRAVE_DATA)
-        set(value) {
-            setAttached(BAttachmentTypes.GRAVE_DATA, value)
-        }
-
 
     var creationTime: Long
         get() = entityData.get(CREATION_TIME)
@@ -98,12 +92,9 @@ class Grave(entityType: EntityType<*>, level: Level) : net.minecraft.world.entit
         }
         if (player is ServerPlayer) {
             if (player.isSecondaryUseActive) {
-                val nbt = CompoundTag()
-                saveWithoutId(nbt)
-                player.sendSystemMessage(Component.literal("Nbt: $nbt"))
                 return InteractionResult.PASS
             } else if (player.getItemInHand(hand).isEmpty) {
-                graveData.forEach { it.extract(player) }
+                getAttachedOrThrow(BAttachmentTypes.GRAVE_DATA).forEach { it.extract(player) }
                 discard()
                 return InteractionResult.SUCCESS
             }
@@ -113,7 +104,6 @@ class Grave(entityType: EntityType<*>, level: Level) : net.minecraft.world.entit
     }
 
     companion object {
-        const val XP_KEY = "xp"
         const val OWNER_KEY = "owner"
         const val CREATION_TIME_KEY = "creation_time"
 
@@ -135,17 +125,13 @@ class Grave(entityType: EntityType<*>, level: Level) : net.minecraft.world.entit
 
             val grave = Grave(player.level())
             grave.setOwner(player)
-            grave.setRot(player.xRot, 0f)
+            grave.yRot = player.yRot
+
             grave.setPos(pos)
             level.addFreshEntity(grave)
 
-            val list = BGraveData.FACTORY_MAP.values.map { it.create(player) }
-            for (x in list) {
-                GraveData.CODEC.encodeStart(JsonOps.INSTANCE, x)
-                    .ifError(::println)
-                    .ifSuccess(::println)
-            }
-            grave.graveData = list
+            val list = BGraveData.FACTORY_MAP.values.map { it.create(player) }.toList()
+            grave.setAttached(BAttachmentTypes.GRAVE_DATA, list)
         }
     }
 }

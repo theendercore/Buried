@@ -2,17 +2,18 @@ package com.theendercore.buried.client.renderer.entity
 
 import com.mojang.authlib.properties.PropertyMap
 import com.mojang.blaze3d.vertex.PoseStack
+import com.mojang.math.Axis
+import com.theendercore.buried.entity.Grave
 import net.minecraft.client.model.SkullModel
 import net.minecraft.client.model.geom.ModelLayers
 import net.minecraft.client.renderer.MultiBufferSource
 import net.minecraft.client.renderer.blockentity.SkullBlockRenderer
+import net.minecraft.client.renderer.entity.EntityRenderer
 import net.minecraft.client.renderer.entity.EntityRendererProvider
 import net.minecraft.client.renderer.texture.TextureAtlas
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.item.component.ResolvableProfile
 import net.minecraft.world.level.block.SkullBlock
-import com.theendercore.buried.entity.Grave
-import net.minecraft.client.renderer.entity.EntityRenderer
 import java.util.*
 
 class GraveRenderer(context: EntityRendererProvider.Context) : EntityRenderer<Grave>(context) {
@@ -22,6 +23,7 @@ class GraveRenderer(context: EntityRendererProvider.Context) : EntityRenderer<Gr
         grave: Grave, f: Float, g: Float, poseStack: PoseStack, multiBufferSource: MultiBufferSource, i: Int,
     ) {
         poseStack.pushPose()
+        poseStack.rotateAround(Axis.YN.rotationDegrees(grave.getPreciseBodyRotation(f)), 0f, 0f, 0f)
         poseStack.translate(-0.5, 0.0, -0.5)
         if (grave.ownerUUID.isPresent) {
             val resolvableProfile =
