@@ -9,7 +9,6 @@ import net.minecraft.resources.ResourceLocation
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.teamvoided.template.config.TemplateConfig
-import org.teamvoided.template.init.BAttachmentTypes
 import org.teamvoided.template.init.BEntities
 import org.teamvoided.template.init.BGraveData
 import org.teamvoided.template.init.BRegistries
@@ -28,7 +27,6 @@ object Template {
         log.info("Hello from Common")
         BRegistries.init()
         BGraveData.init()
-        BAttachmentTypes.init()
         BEntities.init()
 
         CommandRegistrationCallback.EVENT.register { dispatcher, ctx, _ ->

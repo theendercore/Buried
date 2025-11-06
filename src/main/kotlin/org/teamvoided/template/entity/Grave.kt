@@ -7,6 +7,7 @@ import net.minecraft.network.syncher.EntityDataAccessor
 import net.minecraft.network.syncher.EntityDataSerializers
 import net.minecraft.network.syncher.SynchedEntityData
 import net.minecraft.server.level.ServerLevel
+import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.InteractionResult
 import net.minecraft.world.entity.Entity
@@ -15,10 +16,10 @@ import net.minecraft.world.entity.player.Player
 import net.minecraft.world.entity.vehicle.Boat
 import net.minecraft.world.level.Level
 import org.teamvoided.template.Template.log
-import org.teamvoided.template.core.component.GraveDataMap
+import org.teamvoided.template.core.component.GraveData
 import org.teamvoided.template.init.BAttachmentTypes
 import org.teamvoided.template.init.BEntities
-import org.teamvoided.template.init.BRegistries
+import org.teamvoided.template.init.BGraveData
 import java.util.*
 
 @Suppress("UnstableApiUsage")
@@ -44,6 +45,13 @@ class Grave(entityType: EntityType<*>, level: Level) : Entity(entityType, level)
         cachedOwner = entity
         ownerUUID = Optional.of(entity.uuid)
     }
+
+    var graveData: List<GraveData>
+        get() = getAttachedOrThrow(BAttachmentTypes.GRAVE_DATA)
+        set(value) {
+            setAttached(BAttachmentTypes.GRAVE_DATA, value)
+        }
+
 
     var creationTime: Long
         get() = entityData.get(CREATION_TIME)
@@ -86,21 +94,18 @@ class Grave(entityType: EntityType<*>, level: Level) : Entity(entityType, level)
         val interactionResult = super.interact(player, hand)
         if (interactionResult != InteractionResult.PASS) {
             return interactionResult
-        } else if (player.isSecondaryUseActive) {
-            val nbt = CompoundTag()
-            addAdditionalSaveData(nbt)
-            player.sendSystemMessage(Component.literal("Nbt: $nbt"))
-            return InteractionResult.PASS
-        } else if (player.getItemInHand(hand).isEmpty) {
-            getAttached(BAttachmentTypes.SERVER_GRAVE_DATA)?.forEach { (type, data) ->
-                type.extract(data, player)
+        }
+        if (player is ServerPlayer) {
+            if (player.isSecondaryUseActive) {
+                val nbt = CompoundTag()
+                saveWithoutId(nbt)
+                player.sendSystemMessage(Component.literal("Nbt: $nbt"))
+                return InteractionResult.PASS
+            } else if (player.getItemInHand(hand).isEmpty) {
+                graveData.forEach { it.extract(player) }
+                discard()
+                return InteractionResult.SUCCESS
             }
-            getAttached(BAttachmentTypes.SYNCED_GRAVE_DATA)?.forEach { (type, data) ->
-                type.extract(data, player)
-            }
-
-            discard()
-            return InteractionResult.SUCCESS
         }
 
         return InteractionResult.PASS
@@ -127,28 +132,18 @@ class Grave(entityType: EntityType<*>, level: Level) : Entity(entityType, level)
                 player.name.string, level.dimension().location(), pos
             )
 
-            val server = GraveDataMap()
-            val synced = GraveDataMap()
-
-            for (key in BRegistries.GRAVE_DATA) {
-                val data = key.create(player)
-                if (key.isSynced()) {
-                    synced.set(key, data)
-                } else {
-                    server.set(key, data)
-                }
-            }
-
-
-            GraveDataMap.CODEC.encodeStart(JsonOps.INSTANCE, server).ifSuccess(::println).ifError(::println)
-
             val grave = Grave(player.level())
             grave.setOwner(player)
             grave.setPos(pos)
             level.addFreshEntity(grave)
 
-            grave.setAttached(BAttachmentTypes.SERVER_GRAVE_DATA, server)
-            grave.setAttached(BAttachmentTypes.SYNCED_GRAVE_DATA, synced)
+            val list = BGraveData.FACTORY_MAP.values.map { it.create(player) }
+            for (x in list) {
+                GraveData.CODEC.encodeStart(JsonOps.INSTANCE, x)
+                    .ifError(::println)
+                    .ifSuccess(::println)
+            }
+            grave.graveData = list
         }
     }
 }
