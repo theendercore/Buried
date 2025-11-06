@@ -9,22 +9,18 @@ import org.teamvoided.template.Template.id
 import org.teamvoided.template.entity.Grave
 
 object BEntities {
+    fun init() = Unit
 
     val GRAVE = register(
         "grave",
         EntityType.Builder.of(::Grave, MobCategory.MONSTER)
             .fireImmune()
-            .sized(1f, 1f)
-            .eyeHeight(0.5f)
+            .sized(0.5f, 0.5f)
+            .eyeHeight(0.25f)
             .passengerAttachments(1f)
     )
 
-
-    fun init() {
-    }
-
-
-    public fun <T : Entity> register(id: String, entityType: EntityType.Builder<T>): EntityType<T> {
+    fun <T : Entity> register(id: String, entityType: EntityType.Builder<T>): EntityType<T> {
         return Registry.register(BuiltInRegistries.ENTITY_TYPE, id(id), entityType.build(id))
     }
 }

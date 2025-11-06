@@ -23,8 +23,6 @@ class GraveRenderer(context: EntityRendererProvider.Context) : EntityRenderer<Gr
         if (grave.ownerUUID.isEmpty) return
 
         poseStack.pushPose()
-        poseStack.translate(0f, 0.25f, 0f)
-        poseStack.mulPose(entityRenderDispatcher.cameraOrientation())
         poseStack.translate(-0.5, 0.0, -0.5)
         val resolvableProfile = ResolvableProfile(Optional.empty(), Optional.of(grave.ownerUUID.get()), PropertyMap()).resolve().get()
         val renderType = SkullBlockRenderer.getRenderType(SkullBlock.Types.PLAYER, resolvableProfile)

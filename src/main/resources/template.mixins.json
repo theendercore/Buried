@@ -3,7 +3,9 @@
   "minVersion": "0.8",
   "package": "org.teamvoided.template.mixin",
   "compatibilityLevel": "JAVA_21",
-  "mixins": [],
+  "mixins": [
+    "LivingEntityMixin"
+  ],
   "injectors": {
     "defaultRequire": 1
   }

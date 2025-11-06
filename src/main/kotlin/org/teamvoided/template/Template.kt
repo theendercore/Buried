@@ -37,10 +37,6 @@ object Template {
         val world = src.level ?: return -1
         val player = src.player ?: return -1
 
-        val grave = Grave.createGrave(player)
-        grave.ownerUUID = Optional.of(UUID.fromString("d71e4b41-9315-499f-a934-ca925421fb38"))
-        world.addFreshEntity(grave)
-
         return 0
     }
 
