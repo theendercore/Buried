@@ -26,7 +26,6 @@ data class InventoryData(val inventory: Map<Int, ItemStack>) : GraveData {
         inv.setChanged()
         for (stack in list) {
             if (!inv.add(stack)) {
-                player.drop(stack, false)
                 spawnItem(player.level(), player.position(), stack)
             }
         }
