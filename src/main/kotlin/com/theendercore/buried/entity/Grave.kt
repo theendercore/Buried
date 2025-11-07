@@ -27,7 +27,7 @@ import java.util.*
 class Grave(entityType: EntityType<out Entity>, level: Level) : Entity(entityType, level) {
     constructor(level: Level) : this(BEntities.GRAVE, level)
 
-    init{
+    init {
         setAttached(BAttachmentTypes.GRAVE_DATA, listOf())
     }
 
@@ -49,6 +49,10 @@ class Grave(entityType: EntityType<out Entity>, level: Level) : Entity(entityTyp
         cachedOwner = entity
         ownerUUID = Optional.of(entity.uuid)
     }
+
+
+    fun isOwner(entity: Entity): Boolean =
+        if (cachedOwner != null) cachedOwner == entity else ownerUUID.isPresent && ownerUUID.get() == entity.uuid
 
 
     var creationTime: Long
@@ -101,7 +105,7 @@ class Grave(entityType: EntityType<out Entity>, level: Level) : Entity(entityTyp
         if (player !is ServerPlayer) return false
         if (hand != InteractionHand.MAIN_HAND) return false
 
-        if (player.isSecondaryUseActive && player.getItemInHand(hand).isEmpty) {
+        if (player.isSecondaryUseActive && player.getItemInHand(hand).isEmpty && isOwner(player)) {
             getAttachedOrThrow(BAttachmentTypes.GRAVE_DATA).forEach { it.extract(player) }
             discard()
             return true
@@ -119,7 +123,7 @@ class Grave(entityType: EntityType<out Entity>, level: Level) : Entity(entityTyp
         if (isRemoved) return true
         markHurt()
         val player = damage.entity
-        if (player is Player && player.isSecondaryUseActive && player.isCreative) {
+        if (player is Player && player.isSecondaryUseActive && (isOwner(player) || player.isCreative)) {
             destroy()
             return true
         }
