@@ -5,6 +5,7 @@ import com.theendercore.buried.init.BAttachmentTypes
 import com.theendercore.buried.init.BEntities
 import com.theendercore.buried.init.BGraveData
 import net.minecraft.nbt.CompoundTag
+import net.minecraft.network.chat.Component
 import net.minecraft.network.syncher.EntityDataAccessor
 import net.minecraft.network.syncher.EntityDataSerializers
 import net.minecraft.network.syncher.SynchedEntityData
@@ -12,6 +13,7 @@ import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.InteractionResult
+import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.EntityType
 import net.minecraft.world.entity.MoverType
@@ -25,12 +27,15 @@ import java.util.*
 class Grave(entityType: EntityType<out Entity>, level: Level) : Entity(entityType, level) {
     constructor(level: Level) : this(BEntities.GRAVE, level)
 
-    var entityLevel: Level? = level()
+    init{
+        setAttached(BAttachmentTypes.GRAVE_DATA, listOf())
+    }
+
     var cachedOwner: Entity? = null
         get() {
             return if (field != null && !field!!.isRemoved) field
-            else if (ownerUUID.isPresent && entityLevel is ServerLevel) {
-                field = (entityLevel as ServerLevel).getEntity(ownerUUID.get())
+            else if (ownerUUID.isPresent && level() is ServerLevel) {
+                field = (level() as ServerLevel).getEntity(ownerUUID.get())
                 field
             } else null
         }
@@ -56,10 +61,10 @@ class Grave(entityType: EntityType<out Entity>, level: Level) : Entity(entityTyp
     override fun isPushable(): Boolean = true
     override fun push(entity: Entity) {
         if (entity is Boat) {
-            if (entity.boundingBox.minY < this.boundingBox.maxY) {
+            if (entity.boundingBox.minY < boundingBox.maxY) {
                 super.push(entity)
             }
-        } else if (entity.boundingBox.minY <= this.boundingBox.minY) {
+        } else if (entity.boundingBox.minY <= boundingBox.minY) {
             super.push(entity)
         }
     }
@@ -85,37 +90,77 @@ class Grave(entityType: EntityType<out Entity>, level: Level) : Entity(entityTyp
     override fun canUsePortal(bl: Boolean): Boolean = true
 
     override fun interact(player: Player, hand: InteractionHand): InteractionResult {
-        val interactionResult = super.interact(player, hand)
-        if (interactionResult != InteractionResult.PASS) {
-            return interactionResult
-        }
-        if (player is ServerPlayer) {
-            if (player.isSecondaryUseActive) {
-                return InteractionResult.PASS
-            } else if (player.getItemInHand(hand).isEmpty) {
-                getAttachedOrThrow(BAttachmentTypes.GRAVE_DATA).forEach { it.extract(player) }
-                discard()
-                return InteractionResult.SUCCESS
-            }
+        val superResult = super.interact(player, hand)
+
+        return if (superResult != InteractionResult.PASS) superResult
+        else if (interactWithGrave(player, hand)) InteractionResult.SUCCESS
+        else InteractionResult.PASS
+    }
+
+    fun interactWithGrave(player: Player, hand: InteractionHand): Boolean {
+        if (player !is ServerPlayer) return false
+        if (hand != InteractionHand.MAIN_HAND) return false
+
+        if (player.isSecondaryUseActive && player.getItemInHand(hand).isEmpty) {
+            getAttachedOrThrow(BAttachmentTypes.GRAVE_DATA).forEach { it.extract(player) }
+            discard()
+            return true
         }
 
-        return InteractionResult.PASS
+        if (!player.isSecondaryUseActive) {
+            player.sendSystemMessage(Component.literal("Open Inventory"))
+            return true
+        }
+
+        return false
+    }
+
+    override fun hurt(damage: DamageSource, amount: Float): Boolean {
+        if (isRemoved) return true
+        markHurt()
+        val player = damage.entity
+        if (player is Player && player.isSecondaryUseActive && player.isCreative) {
+            destroy()
+            return true
+        }
+
+        return false
+    }
+
+    fun destroy() {
+        getAttachedOrThrow(BAttachmentTypes.GRAVE_DATA).forEach { it.destroy(this) }
+        discard()
     }
 
     override fun tick() {
         super.tick()
-        if (level().minBuildHeight + 1 < y) {
-            applyGravity()
-            move(MoverType.SELF, deltaMovement)
-            var f = 0.99
-            if (onGround()) {
-                f *= level().getBlockState(blockPosBelowThatAffectsMyMovement).block.getFriction()
-            }
 
-            deltaMovement = deltaMovement.multiply(f, 0.0, f)
-        } else if (y < level().minBuildHeight) {
+        moveGrave();
+    }
+
+    fun setFluidMovement() {
+        val vec3 = deltaMovement
+        setDeltaMovement(vec3.x * 0.96f, vec3.y + (if (vec3.y < 0.06f) 0.0005f else 0.0f), vec3.z * 0.96f)
+    }
+
+    private fun moveGrave() {
+        level().profiler.push("grave_move")
+        if (isInWater || isInLava) setFluidMovement()
+        else applyGravity()
+
+        if (y <= level().minBuildHeight) {
             setPos(x, level().minBuildHeight + 1.0, z)
+            deltaMovement = Vec3(deltaMovement.x * 0.01, 0.0, deltaMovement.z * 0.01)
         }
+        move(MoverType.SELF, deltaMovement)
+
+        var f = 0.99
+        if (onGround()) {
+            f *= level().getBlockState(blockPosBelowThatAffectsMyMovement).block.getFriction()
+        }
+
+        deltaMovement = deltaMovement.multiply(f, 1.0, f)
+        level().profiler.pop()
     }
 
     companion object {
