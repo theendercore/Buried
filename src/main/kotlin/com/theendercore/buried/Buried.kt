@@ -2,10 +2,7 @@ package com.theendercore.buried
 
 import com.mojang.brigadier.context.CommandContext
 import com.theendercore.buried.config.BuriedConfig
-import com.theendercore.buried.init.BAttachmentTypes
-import com.theendercore.buried.init.BEntities
-import com.theendercore.buried.init.BGraveData
-import com.theendercore.buried.init.BRegistries
+import com.theendercore.buried.init.*
 import me.fzzyhmstrs.fzzy_config.api.ConfigApi
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback
 import net.fabricmc.loader.api.FabricLoader
@@ -26,11 +23,12 @@ object Buried {
     var config = ConfigApi.registerAndLoadConfig(::BuriedConfig)
 
     fun init() {
-        log.info("Hello from Common")
+        log.info("Im gonna bury you!")
         BRegistries.init()
         BGraveData.init()
         BAttachmentTypes.init()
         BEntities.init()
+        BMenus.init()
 
         if (isDev()) {
             CommandRegistrationCallback.EVENT.register { dispatcher, ctx, _ ->
@@ -40,10 +38,6 @@ object Buried {
     }
 
     fun grave(cx: CommandContext<CommandSourceStack>): Int {
-        val src = cx.source ?: return -1
-        val world = src.level ?: return -1
-        val player = src.player ?: return -1
-
         return 0
     }
 

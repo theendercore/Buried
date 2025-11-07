@@ -6,6 +6,9 @@ import com.theendercore.buried.core.component.GraveData
 import com.theendercore.buried.init.BAttachmentTypes
 import com.theendercore.buried.init.BEntities
 import com.theendercore.buried.init.BGraveData
+import com.theendercore.buried.network.protocol.common.EntityIdPayload
+import com.theendercore.buried.world.inventory.GraveMenu
+import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.network.chat.Component
 import net.minecraft.network.syncher.EntityDataAccessor
@@ -19,8 +22,10 @@ import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.EntityType
 import net.minecraft.world.entity.MoverType
+import net.minecraft.world.entity.player.Inventory
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.entity.vehicle.Boat
+import net.minecraft.world.inventory.AbstractContainerMenu
 import net.minecraft.world.level.Level
 import net.minecraft.world.phys.Vec3
 import java.util.*
@@ -116,7 +121,7 @@ class Grave(entityType: EntityType<out Entity>, level: Level) : Entity(entityTyp
         }
 
         if (isOwner(player) || player.getItemInHand(hand).isEmpty) {
-            player.sendSystemMessage(Component.literal("Open Inventory"))
+            player.openMenu(menu(this))
             return true
         }
 
@@ -163,7 +168,7 @@ class Grave(entityType: EntityType<out Entity>, level: Level) : Entity(entityTyp
         setDeltaMovement(vec3.x * 0.96f, vec3.y + (if (vec3.y < 0.1f) 0.0005f else 0.0f), vec3.z * 0.96f)
     }
 
-    private fun moveGrave() {
+    fun moveGrave() {
         level().profiler.push("grave_move")
         if (isInWater || isInLava) setFluidMovement()
         else applyGravity()
@@ -202,6 +207,18 @@ class Grave(entityType: EntityType<out Entity>, level: Level) : Entity(entityTyp
             SynchedEntityData.defineId<Optional<UUID>>(Grave::class.java, EntityDataSerializers.OPTIONAL_UUID)
         val CREATION_TIME: EntityDataAccessor<Long> =
             SynchedEntityData.defineId<Long>(Grave::class.java, EntityDataSerializers.LONG)
+
+
+        fun menu(gave: Grave): ExtendedScreenHandlerFactory<EntityIdPayload> {
+            return object : ExtendedScreenHandlerFactory<EntityIdPayload> {
+                override fun getDisplayName(): Component = gave.name
+                override fun getScreenOpeningData(player: ServerPlayer): EntityIdPayload =
+                    EntityIdPayload(gave.id)
+
+                override fun createMenu(i: Int, inventory: Inventory, player: Player): AbstractContainerMenu =
+                    GraveMenu(i, inventory, gave)
+            }
+        }
 
         @JvmStatic
         fun createGrave(player: Player) {
