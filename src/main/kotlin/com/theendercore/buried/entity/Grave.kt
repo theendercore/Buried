@@ -138,8 +138,7 @@ class Grave(entityType: EntityType<out Entity>, level: Level) : Entity(entityTyp
 
     override fun tick() {
         super.tick()
-
-        moveGrave();
+        moveGrave()
     }
 
     fun setFluidMovement() {
