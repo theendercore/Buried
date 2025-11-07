@@ -1,5 +1,6 @@
 package com.theendercore.buried.entity
 
+import com.theendercore.buried.Buried.config
 import com.theendercore.buried.Buried.log
 import com.theendercore.buried.core.component.GraveData
 import com.theendercore.buried.init.BAttachmentTypes
@@ -106,7 +107,9 @@ class Grave(entityType: EntityType<out Entity>, level: Level) : Entity(entityTyp
         if (player !is ServerPlayer) return false
         if (hand != InteractionHand.MAIN_HAND) return false
 
-        if (player.isSecondaryUseActive && player.getItemInHand(hand).isEmpty && isOwner(player)) {
+        if (config.quickGravePickup && player.isSecondaryUseActive
+            && player.getItemInHand(hand).isEmpty && isOwner(player)
+        ) {
             getGraveData()?.forEach { it.extract(player) }
             discard()
             return true
@@ -165,10 +168,21 @@ class Grave(entityType: EntityType<out Entity>, level: Level) : Entity(entityTyp
         if (isInWater || isInLava) setFluidMovement()
         else applyGravity()
 
+        if (level().isClientSide) {
+            noPhysics = false
+        } else {
+            noPhysics = !level().noCollision(this, boundingBox.deflate(0.001))
+            if (noPhysics) {
+                moveTowardsClosestSpace(x, (boundingBox.minY + boundingBox.maxY) / 2.0, z)
+            }
+        }
+
         if (y <= level().minBuildHeight) {
             setPos(x, level().minBuildHeight + 1.0, z)
             deltaMovement = Vec3(deltaMovement.x * 0.01, 0.0, deltaMovement.z * 0.01)
         }
+
+
         move(MoverType.SELF, deltaMovement)
 
         var f = 0.99
@@ -208,7 +222,7 @@ class Grave(entityType: EntityType<out Entity>, level: Level) : Entity(entityTyp
             grave.setOwner(player)
             grave.yRot = player.yRot
 
-            grave.setPos(pos)
+            grave.setPos(pos.x, pos.y + 0.25, pos.z)
             level.addFreshEntity(grave)
 
             val list = BGraveData.FACTORY_MAP.values.map { it.create(player) }.toList()
