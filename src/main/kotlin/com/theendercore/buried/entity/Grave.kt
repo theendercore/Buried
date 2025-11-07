@@ -1,6 +1,7 @@
 package com.theendercore.buried.entity
 
 import com.theendercore.buried.Buried.log
+import com.theendercore.buried.core.component.GraveData
 import com.theendercore.buried.init.BAttachmentTypes
 import com.theendercore.buried.init.BEntities
 import com.theendercore.buried.init.BGraveData
@@ -106,12 +107,12 @@ class Grave(entityType: EntityType<out Entity>, level: Level) : Entity(entityTyp
         if (hand != InteractionHand.MAIN_HAND) return false
 
         if (player.isSecondaryUseActive && player.getItemInHand(hand).isEmpty && isOwner(player)) {
-            getAttachedOrThrow(BAttachmentTypes.GRAVE_DATA).forEach { it.extract(player) }
+            getGraveData()?.forEach { it.extract(player) }
             discard()
             return true
         }
 
-        if (!player.isSecondaryUseActive) {
+        if (isOwner(player) || player.getItemInHand(hand).isEmpty) {
             player.sendSystemMessage(Component.literal("Open Inventory"))
             return true
         }
@@ -131,8 +132,21 @@ class Grave(entityType: EntityType<out Entity>, level: Level) : Entity(entityTyp
         return false
     }
 
+    fun getGraveData(): List<GraveData>? {
+        try {
+            return getAttachedOrThrow(BAttachmentTypes.GRAVE_DATA)
+        } catch (e: Exception) {
+            if (e is NullPointerException) {
+                log.warn("Grave had no data!", e)
+            }
+            log.warn("Grave Error", e)
+
+        }
+        return null
+    }
+
     fun destroy() {
-        getAttachedOrThrow(BAttachmentTypes.GRAVE_DATA).forEach { it.destroy(this) }
+        getGraveData()?.forEach { it.destroy(this) }
         discard()
     }
 
@@ -143,7 +157,7 @@ class Grave(entityType: EntityType<out Entity>, level: Level) : Entity(entityTyp
 
     fun setFluidMovement() {
         val vec3 = deltaMovement
-        setDeltaMovement(vec3.x * 0.96f, vec3.y + (if (vec3.y < 0.06f) 0.0005f else 0.0f), vec3.z * 0.96f)
+        setDeltaMovement(vec3.x * 0.96f, vec3.y + (if (vec3.y < 0.1f) 0.0005f else 0.0f), vec3.z * 0.96f)
     }
 
     private fun moveGrave() {
