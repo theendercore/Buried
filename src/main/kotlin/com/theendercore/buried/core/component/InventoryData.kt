@@ -3,12 +3,13 @@ package com.theendercore.buried.core.component
 import com.mojang.serialization.Codec
 import com.mojang.serialization.MapCodec
 import com.mojang.serialization.codecs.RecordCodecBuilder
-import net.minecraft.server.level.ServerLevel
-import net.minecraft.world.entity.player.Player
-import net.minecraft.world.item.ItemStack
 import com.theendercore.buried.entity.Grave
 import com.theendercore.buried.init.BGraveData
-import kotlin.collections.iterator
+import net.minecraft.world.entity.item.ItemEntity
+import net.minecraft.world.entity.player.Player
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.level.Level
+import net.minecraft.world.phys.Vec3
 
 
 data class InventoryData(val inventory: Map<Int, ItemStack>) : GraveData {
@@ -26,18 +27,25 @@ data class InventoryData(val inventory: Map<Int, ItemStack>) : GraveData {
         for (stack in list) {
             if (!inv.add(stack)) {
                 player.drop(stack, false)
+                spawnItem(player.level(), player.position(), stack)
             }
         }
     }
 
     override fun destroy(grave: Grave) {
         val level = grave.level()
-        if (level is ServerLevel) {
-            for ((_, stack) in inventory) {
-                println(stack)
-            }
+        for (item in inventory) {
+            spawnItem(level, grave.position(), item.value)
         }
     }
+
+    private fun spawnItem(level: Level, grave: Vec3, stack: ItemStack) {
+        val item = ItemEntity(level, grave.x, grave.y + 0.25, grave.z, stack)
+        item.setPickUpDelay(4)
+        item.deltaMovement = Vec3(0.0, 0.1, 0.0)
+        level.addFreshEntity(item)
+    }
+
 
     override fun getType(): GraveDataType<out GraveData> = BGraveData.INVENTORY
 
